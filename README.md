@@ -54,17 +54,21 @@ gate arrays on 64-pin carrier boards.  That would be useful for repairing
 actual Cats, but would be a lot of work.
 
 Another problem for replication is the ROM's.  The assembly code for the
-kernel monitor ROM is in the Technical Reference Manual, but I haven't
-been able to find the BASIC ROM's online anywhere.  If you have a
-Cat, then please dump the ROM's, put them on
-[bitsavers.org](http://www.bitsavers.org/) or
+kernel monitor ROM is in the Technical Reference Manual.  I have put the
+code in the [src/kernel](src/kernel) sub-directory of this repository,
+annotated with some of my own notes to explain what is going on.
+
+I haven't been able to find the BASIC ROM's online anywhere.  I have bits and
+pieces of the BASIC ROM's that I disassembled by hand back in the day,
+but not a complete set.  If you have a Cat, then please dump the ROM's,
+put them on [bitsavers.org](http://www.bitsavers.org/) or
 [archive.org](https://archive.org/), and let me know.
 
 ## Chip List
 
 As mentioned above, the schematics in the Technical Reference Manual do not
 include information as to what part each "Un" designator corresponds to.
-Here is what I was able to figure out from context:
+Here is what I was able to figure out from context (some of these may be wrong):
 
 <table border="1">
 <tr><td><b>Designator</b></td><td><b>Part</b></td><td><b>Schematic Pages</b></td></tr>
@@ -118,7 +122,9 @@ Here is what I was able to figure out from context:
 
 ## References
 
-* [Technical Reference Manual on archive.org](https://archive.org/details/dsecattrm)
+* [Cat Technical Reference Manual on archive.org](https://archive.org/details/dsecattrm)
+* [Laser 3000 Personal Computer User's Manual on archive.org](https://archive.org/details/l3000UM)
+* [Laser 3000 Personal Computer BASIC Reference Manual on archive.org](https://archive.org/details/Laser3000PersonalComputerBASICReferenceManualAppleIIClone)
 * [Dick Smith Cat on Reddit](https://www.reddit.com/r/retrobattlestations/comments/tohbjp/team_green_dick_smith_cat_aka_vtech_laser_3000/)
 * [Dick Smith Cat on AppleLogic](http://www.applelogic.org/TheCAT.html)
 * [Laser 3000 on OLD-COMPUTERS.COM](https://www.old-computers.com/museum/computer.asp?c=156)
@@ -126,17 +132,17 @@ Here is what I was able to figure out from context:
 ## History
 
 The Dick Smith Cat was the first computer that my family owned.  My parents
-paid AUD$699 for it in 1984 when I would have been about 14 years old.
-The receipt was still stapled into the back of one of the manuals!
-The family's black and white spare holiday TV served as the monitor.
-Later a printer and a disk drive were added.
+paid AUD$699 for it in 1984 when I would have been about 14 years old
+(about AUD$2500 in year 2024 dollars).  The receipt was still stapled
+into the back of one of the manuals!  The family's black and white spare
+holiday TV served as the monitor.  Later a printer and a disk drive were added.
 
 Overseas, the Cat was known as the VTech Laser 3000.  Dick Smith Electronics
 rebadged it as the "Cat" in Australia.  It was mostly Apple II compatible
 but a lot cheaper than an Apple II would have been in Australia at the time.
 
 The power supply died around 1988 or 1989 and it never recovered.
-I sent it to the electronics recyclers a long time ago, and now I sort of
+I sent it to the electronics recyclers a long time ago, and now I
 wish I hadn't.  Knowing what I do now, it may have been possible to
 restore it.
 
@@ -151,7 +157,7 @@ Cat's kernel monitor did not have a disassembler like the Apple II did.
 I had to memorise the entire 6502 instruction set and decode the
 hexadecimal by hand.
 
-My hand-written notes are incomplete but I do have a huge chunk of the
+My hand-written notes are incomplete but I do have a large chunk of the
 original BASIC ROM's in my notes.  However, without the original ROM's and a
 working Cat, there just isn't enough information to reproduce BASIC and
 other parts of the system.
