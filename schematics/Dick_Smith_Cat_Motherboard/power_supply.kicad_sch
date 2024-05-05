@@ -1,0 +1,16 @@
+(kicad_sch (version 20230121) (generator eeschema)
+
+  (uuid 6d33291c-d816-41c9-9d97-8c82a2ca9f38)
+
+  (paper "A4")
+
+  (title_block
+    (title "Dick Smith Cat (PAL Version)")
+    (date "1984")
+    (company "Video Technology Ltd.")
+  )
+
+  (lib_symbols
+  )
+
+)
