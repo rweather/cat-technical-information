@@ -26,13 +26,13 @@ this was difficult.  I have done the best I can - some of them may be wrong.
 Here are the schematics, redrawn in Kicad:
 
 * [Motherboard Schematic](schematics/Dick_Smith_Cat_Motherboard/PDF/Dick_Smith_Cat_Motherboard.pdf)
-* TBD: Linear Board Schematic
+* [PAL Linear Board Schematic](schematics/Dick_Smith_Cat_Linear_Board_PAL/PDF/Dick_Smith_Cat_Linear_Board_PAL.pdf)
 * TBD: Power Supply Board Schematic
 
 ## Can We Rebuild It?
 
 Since Cats (and Laser 3000's) are so rare these days, there is a question as
-to whether we could build a replica using modern parts.
+to whether we could build a replica using modern off-the-shelf parts.
 
 Well, no.
 
@@ -118,6 +118,11 @@ Here is what I was able to figure out from context (some of these may be wrong):
 <tr><td>U44</td><td>8048 Keyboard Microcontroller</td><td>8</td></tr>
 <tr><td>U45</td><td>74LS151 8-Line to 1-Line Selector/Muliplexer</td><td>10</td></tr>
 <tr><td>U46</td><td>558 Quad Timer</td><td>10</td></tr>
+<tr><td> </td><td> </td><td> </td></tr>
+<tr><td>U47</td><td>74LS00 Quad NAND Gate</td><td>Linear Board 1</td></tr>
+<tr><td>U48</td><td>TEA 1002 PAL Encoder</td><td>Linear Board 1</td></tr>
+<tr><td>U49</td><td>uA741C Amplifier</td><td>Linear Board 2</td></tr>
+<tr><td>U50</td><td>TBA820M Amplifier</td><td>Linear Board 3</td></tr>
 </table>
 
 ## References

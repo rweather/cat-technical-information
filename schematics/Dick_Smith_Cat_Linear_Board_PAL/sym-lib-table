@@ -1,0 +1,5 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "TEA1002")(type "KiCad")(uri "${KIPRJMOD}/TEA1002.kicad_sym")(options "")(descr ""))
+  (lib (name "Color_Defeat")(type "KiCad")(uri "${KIPRJMOD}/Color_Defeat.kicad_sym")(options "")(descr ""))
+)
