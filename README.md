@@ -141,10 +141,10 @@ Here is what I was able to figure out from context (some of these may be wrong):
 ## History
 
 The Dick Smith Cat was the first computer that my family owned.  My parents
-paid AUD$699 for it in 1984 when I would have been about 14 years old
-(about AUD$2500 in year 2024 dollars).  The receipt was still stapled
-into the back of one of the manuals!  The family's black and white spare
-holiday TV served as the monitor.  Later a printer and a disk drive were added.
+paid AUD$699 for it in 1984 when I would have been about 14 years old.
+The receipt was still stapled into the back of one of the manuals!
+The family's black and white spare holiday TV served as the monitor.
+Later a printer and a disk drive were added.
 
 Overseas, the Cat was known as the VTech Laser 3000.  Dick Smith Electronics
 rebadged it as the "Cat" in Australia.  It was mostly Apple II compatible
