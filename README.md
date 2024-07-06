@@ -1,16 +1,14 @@
-Schematics for the Dick Smith Cat / Laser 3000
-==============================================
+Technical Information for the Dick Smith Cat / Laser 3000
+=========================================================
 
 This project was born out of nostalgia for the 6502-based "Dick Smith Cat"
 computer that I had back in the 1980's.  It was mostly Apple II compatible;
 overseas it was known as the VTech Laser 3000.  See **History** below for more.
 
 Unfortunately I do not have a Cat anymore.  The power supply died on mine
-and I sent it to the dump.  I now really wish I hadn't!  If anyone has a
-Cat or Laser 3000 they are willing to part with, working or not,
-then please [contact me via e-mail](mailto:rhys.weatherley@gmail.com).
+and I sent it to the dump.  I now really wish I hadn't!
 
-In the meantime, this project is my contribution to preserving Cat history.
+This project is my contribution to preserving Cat history.
 
 ## Schematics
 
@@ -27,7 +25,13 @@ Here are the schematics, redrawn in Kicad:
 
 * [Motherboard Schematic](schematics/Dick_Smith_Cat_Motherboard/PDF/Dick_Smith_Cat_Motherboard.pdf)
 * [PAL Linear Board Schematic](schematics/Dick_Smith_Cat_Linear_Board_PAL/PDF/Dick_Smith_Cat_Linear_Board_PAL.pdf)
-* TBD: Power Supply Board Schematic
+* [Power Supply Schematic](schematics/Dick_Smith_Cat_Power_Supply/PDF/Dick_Smith_Cat_Power_Supply.pdf)
+
+## Kernel ROM Listing
+
+I have typed up the kernel ROM listing from the Technical Reference Manual,
+and annotated it with my own notes as to what is happening.  The source
+code can be found in the [src/kernel](src/kernel) directory.
 
 ## Can We Rebuild It?
 
