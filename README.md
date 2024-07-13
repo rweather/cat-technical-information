@@ -26,7 +26,8 @@ Here are the schematics, redrawn in Kicad:
 * [Motherboard Schematic](schematics/Dick_Smith_Cat_Motherboard/PDF/Dick_Smith_Cat_Motherboard.pdf)
 * [PAL Linear Board Schematic](schematics/Dick_Smith_Cat_Linear_Board_PAL/PDF/Dick_Smith_Cat_Linear_Board_PAL.pdf)
 * [Power Supply Schematic](schematics/Dick_Smith_Cat_Power_Supply/PDF/Dick_Smith_Cat_Power_Supply.pdf)
-* [Emulator Schematic](schematics/Dick_Smith_Cat_Emulator/PDF/Dick_Smith_Cat_Emulator.pdf)
+* [Emulator Cartridge Schematic](schematics/Dick_Smith_Cat_Emulator/PDF/Dick_Smith_Cat_Emulator.pdf)
+* [Joystick Schematic](schematics/Dick_Smith_Cat_Joysticks/PDF/Dick_Smith_Cat_Joysticks.pdf)
 
 ## Kernel ROM Listing
 
