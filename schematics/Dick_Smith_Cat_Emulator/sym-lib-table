@@ -1,0 +1,4 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "Dynamic RAM 4416")(type "KiCad")(uri "${KIPRJMOD}/Dynamic_RAM_4416.kicad_sym")(options "")(descr ""))
+)
