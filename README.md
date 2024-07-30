@@ -1,12 +1,16 @@
 Technical Information for the Dick Smith Cat / Laser 3000
 =========================================================
 
+<img alt="Cat Computer" src="images/cat-computer-photo.jpg" width="860"/>
+
 This project was born out of nostalgia for the 6502-based "Dick Smith Cat"
 computer that I had back in the 1980's.  It was mostly Apple II compatible;
 overseas it was known as the VTech Laser 3000.  See **History** below for more.
 
-Unfortunately I do not have a Cat anymore.  The power supply died on mine
-and I sent it to the dump.  I now really wish I hadn't!
+Unfortunately the power supply died on mine and I sent it to the dump.
+I now really wish I hadn't!  Fortunately, I did find a Cat on Gumtree
+for sale in 2024 and so I now have a Cat again, together with some
+accessories (joysticks, disk controller, disk drive, and emulator cartridge).
 
 This project is my contribution to preserving Cat history.
 
@@ -18,8 +22,8 @@ are very hard to read.  So I decided to redraw them in KiCad.
 There are lots of details missing in the Technical Reference Manual;
 for example, U17 is listed in the schematic but there is no information
 that it is a 74LS86 Quad XOR gate.  It was necessary to figure out
-from context what the components were.  Without an actual Cat to inspect,
-this was difficult.  I have done the best I can - some of them may be wrong.
+from context what the components were.  I'll cross-check them with the
+actual Cat later.
 
 Here are the schematics, redrawn in Kicad:
 
@@ -45,7 +49,7 @@ Well, no.
 The core of the Cat is two 64-pin gate array chips, U2 and U14.  These
 handle glue logic, dynamic RAM interfacing, and the video subsystem.
 Without a working Cat to harvest the chips from, there's no way to replicate it.
-And if I had a working Cat, I wouldn't need to replicate it!
+And if I have a working Cat, I don't need to replicate it!
 
 The gate arrays and clean-roomed ROM's is how VTech avoided Apple's lawyers.
 It wasn't a chip for chip rip-off of the Apple II like many other clones
@@ -64,11 +68,10 @@ kernel monitor ROM is in the Technical Reference Manual.  I have put the
 code in the [src/kernel](src/kernel) sub-directory of this repository,
 annotated with some of my own notes to explain what is going on.
 
-I haven't been able to find the BASIC ROM's online anywhere.  I have bits and
+I wasn't been able to find the BASIC ROM's online anywhere.  I had bits and
 pieces of the BASIC ROM's that I disassembled by hand back in the day,
-but not a complete set.  If you have a Cat, then please dump the ROM's,
-put them on [bitsavers.org](http://www.bitsavers.org/) or
-[archive.org](https://archive.org/), and let me know.
+but not a complete set.  Now that I have a working Cat, I will dump the
+ROM's at some point.
 
 ## Chip List
 
@@ -150,7 +153,7 @@ Later a printer and a disk drive were added.
 
 Overseas, the Cat was known as the VTech Laser 3000.  Dick Smith Electronics
 rebadged it as the "Cat" in Australia.  It was mostly Apple II compatible
-but a lot cheaper than an Apple II would have been in Australia at the time.
+but about half the price that an Apple II was at the time.
 
 The power supply died around 1988 or 1989 and it never recovered.
 I sent it to the electronics recyclers a long time ago, and now I
@@ -169,9 +172,7 @@ I had to memorise the entire 6502 instruction set and decode the
 hexadecimal by hand.
 
 My hand-written notes are incomplete but I do have a large chunk of the
-original BASIC ROM's in my notes.  However, without the original ROM's and a
-working Cat, there just isn't enough information to reproduce BASIC and
-other parts of the system.
+original BASIC ROM's in my notes.
 
 ## License
 
