@@ -39,6 +39,69 @@ I have typed up the kernel ROM listing from the Technical Reference Manual,
 and annotated it with my own notes as to what is happening.  The source
 code can be found in the [src/kernel](src/kernel) directory.
 
+## Memory Map
+
+The Cat supports an 18-bit 256K memory address space, divided up into
+sixteen 16K memory banks.  Any of these sixteen memory banks can be
+mapped into four memory "windows" at addresses $0000, $4000, $8000, and
+$C000.  By default the ROM maps memory banks 0, 1, 3, and F into the
+four memory windows.
+
+* $00000 to $0FFFF - 64K of RAM on the motherboard.
+* $10000 to $2FFFF - 128K of expansion RAM (not fitted as standard).
+* $30000 to $37FFF - Unused space.
+* $38000 to $3BFFF - BASIC ROM.
+* $3C000 to $3CFFF - I/O space.
+* $3D000 to $3FFFF - BASIC and kernel monitor ROM.
+
+The memory windows are set by writing the memory bank number (0-F) to the
+I/O addresses $3C07C, $3C07D, $3C07E, and $3C07F.  The memory bank numbers
+should also be written to zero page locations $C5, $C6, $C7, and $C8
+so that the rest of the system knows the current memory arrangement.
+
+Note: Writing a value other than F to $3C07F will make the system unusable
+as the I/O space will become inaccessible in the 6502's 64K address space.
+There is no way to restore the correct mapping except via a system reset.
+
+## Slots
+
+The Cat does not have physical slots in the same sense as the Apple II.
+The 72-pin expansion connectors have the entire 256K 18-bit address bus and
+8-bit data bus available.  Decoding of slot addresses is done on the plug-in
+cartridges.  The I/O "slots" are virtual and are allocated as follows:
+
+* Slot 0 - Emulator cartridge a.k.a the language card
+* Slot 1 - Printer
+* Slot 2 - RS-232
+* Slot 3 - 80 column mode
+* Slot 4 - Unused
+* Slot 5 - Reserved for a second disk controller
+* Slot 6 - Standard disk controller
+* Slot 7 - Unused
+
+At startup, the monitor ROM will probe for a disk controller in slot 6
+and then the ROM will probe for a disk controller in slot 5.  If either
+slot is occupied, the ROM jumps to the disk controller's ROM to boot
+from the external disk drive.
+
+Cat's didn't use slot 5 - the disk controller was always in slot 6.
+
+Slot 5 could be used to create a bootable game or program cartridge.
+Instead of booting a disk, the program in the cartridge is run
+automatically at power on if there is no disk constroller cartridge
+present.  The following hexadecimal bytes should appear at $C500 to
+make the cartridge auto-boot:
+
+    A2 20 A0 00 A2 03 86 3C
+
+These signature bytes are followed by code to load the cartridge's ROM
+contents into main RAM to run the program.  Or bank-switch in the
+cartridge at address $4000 or $8000 to execute directly out of the ROM.
+
+If a disk controller cartrige is present in slot 6, then slot 5 will not
+boot automatically.  Use <tt>PR#5</tt> at the BASIC prompt to activate the
+code in the slot 5 cartridge.
+
 ## Can We Rebuild It?
 
 Since Cats (and Laser 3000's) are so rare these days, there is a question as
