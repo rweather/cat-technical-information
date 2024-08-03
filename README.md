@@ -140,7 +140,8 @@ ROM's at some point.
 
 As mentioned above, the schematics in the Technical Reference Manual do not
 include information as to what part each "Un" designator corresponds to.
-Here is what I was able to figure out from context (some of these may be wrong):
+Most of them I was able to figure out from context and the rest were
+confirmed through inspection of an actual Cat motherboard.
 
 <table border="1">
 <tr><td><b>Designator</b></td><td><b>Part</b></td><td><b>Schematic Pages</b></td></tr>
@@ -156,7 +157,7 @@ Here is what I was able to figure out from context (some of these may be wrong):
 <tr><td>U10</td><td>4164 64-kbit Dynamic RAM</td><td>5</td></tr>
 <tr><td>U11</td><td>4164 64-kbit Dynamic RAM</td><td>5</td></tr>
 <tr><td>U12</td><td>4164 64-kbit Dynamic RAM</td><td>5</td></tr>
-<tr><td>U13</td><td>74LS174 Hex D-Type Flip-Flop</td><td>4</td></tr>
+<tr><td>U13</td><td>74LS174 Hex D-Type Flip-Flop (some boards fit a 74LS244 instead for U13)</td><td>4</td></tr>
 <tr><td>U14</td><td>Gate Array 1</td><td>4</td></tr>
 <tr><td>U15</td><td>74LS139 Dual 2-Line to 4-Line Decoder</td><td>5, 6</td></tr>
 <tr><td>U16</td><td>74LS138 3-Line to 8-Line Decoder</td><td>6</td></tr>
@@ -164,14 +165,14 @@ Here is what I was able to figure out from context (some of these may be wrong):
 <tr><td>U18</td><td>74LS74 Dual D Flip-Flop</td><td>7</td></tr>
 <tr><td>U19</td><td>74LS125 Quad Buffer with Tri-State Outputs</td><td>2, 3, 7</td></tr>
 <tr><td>U20</td><td>74LS08 Quad AND Gate</td><td>5, 7</td></tr>
-<tr><td>U21</td><td>74LS161 Binary 4-bit Counter</td><td>2</td></tr>
+<tr><td>U21</td><td>74LS163 Binary 4-bit Counter</td><td>2</td></tr>
 <tr><td>U22</td><td>2732 EPROM (Character Generator)</td><td>7</td></tr>
 <tr><td>U23</td><td>74LS166 Shift Register</td><td>7</td></tr>
 <tr><td>U24</td><td>74LS244 Octal Buffer</td><td>3</td></tr>
 <tr><td>U25</td><td>74LS244 Octal Buffer</td><td>3</td></tr>
 <tr><td>U26</td><td>74LS244 Octal Buffer</td><td>3</td></tr>
 <tr><td>U27</td><td>6502A CPU</td><td>3</td></tr>
-<tr><td>U28</td><td>(Not Used)</td><td> </td></tr>
+<tr><td>U28</td><td>Not used in the schematic (some boards fit a 74LS04 for U28)</td><td> </td></tr>
 <tr><td>U29</td><td>74LS74 Dual D Flip-Flop</td><td>7</td></tr>
 <tr><td>U30</td><td>74LS00 Quad NAND Gate</td><td>7</td></tr>
 <tr><td>U31</td><td>74LS74 Dual D Flip-Flop</td><td>2</td></tr>
@@ -180,7 +181,7 @@ Here is what I was able to figure out from context (some of these may be wrong):
 <tr><td>U34</td><td>74LS08 Quad AND Gate</td><td>2, 6, 10</td></tr>
 <tr><td>U35</td><td>74LS00 Quad NAND Gate</td><td>3, 7</td></tr>
 <tr><td>U36</td><td>74LS04 Hex Inverter</td><td>2, 3, 6, 7</td></tr>
-<tr><td>U37</td><td>74LS45 BCD to decimal decoder, open collector</td><td>8</td></tr>
+<tr><td>U37</td><td>74LS145 BCD to decimal decoder, open collector</td><td>8</td></tr>
 <tr><td>U38</td><td>27256 28-pin ROM</td><td>6</td></tr>
 <tr><td>U39</td><td>74LS374 Octal D-Type Latch, Edge Triggered</td><td>10</td></tr>
 <tr><td>U40</td><td>74LS245 Bus Transceiver</td><td>3</td></tr>
@@ -188,7 +189,7 @@ Here is what I was able to figure out from context (some of these may be wrong):
 <tr><td>U42</td><td>SN76489AN Sound Generator</td><td>10</td></tr>
 <tr><td>U43</td><td>74LS138 3-Line to 8-Line Decoder</td><td>10</td></tr>
 <tr><td>U44</td><td>8048 Keyboard Microcontroller</td><td>8</td></tr>
-<tr><td>U45</td><td>74LS151 8-Line to 1-Line Selector/Muliplexer</td><td>10</td></tr>
+<tr><td>U45</td><td>74LS251 8-Line to 1-Line Selector/Muliplexer</td><td>10</td></tr>
 <tr><td>U46</td><td>558 Quad Timer</td><td>10</td></tr>
 <tr><td> </td><td> </td><td> </td></tr>
 <tr><td>U47</td><td>74LS00 Quad NAND Gate</td><td>Linear Board 1</td></tr>
