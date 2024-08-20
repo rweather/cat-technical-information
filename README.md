@@ -98,7 +98,7 @@ These signature bytes are followed by code to load the cartridge's ROM
 contents into main RAM to run the program.  Or bank-switch in the
 cartridge at address $4000 or $8000 to execute directly out of the ROM.
 
-If a disk controller cartrige is present in slot 6, then slot 5 will not
+If a disk controller cartridge is present in slot 6, then slot 5 will not
 boot automatically.  Use <tt>PR#5</tt> at the BASIC prompt to activate the
 code in the slot 5 cartridge.
 
