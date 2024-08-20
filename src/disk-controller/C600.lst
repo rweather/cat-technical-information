@@ -1,0 +1,374 @@
+Sections:
+00: "segc600" (C600-C700)
+
+
+Source: "C600.s"
+                        	     1: 
+                        	     2: ;***********************************************************************
+                        	     3: ;
+                        	     4: ; This is the assembly code for the C600 ROM for early versions of the
+                        	     5: ; Dick Smith Cat's disk controller cartridge.
+                        	     6: ;
+                        	     7: ; The code is very similar to the ROM in the official Apple Disk ][
+                        	     8: ; controller card: https://6502disassembly.com/a2-rom/C600ROM.html
+                        	     9: ; In fact, this is just the original code rearranged a bit to try to
+                        	    10: ; not look like the original.  But it is basically the original as-is.
+                        	    11: ;
+                        	    12: ;***********************************************************************
+                        	    13: 
+                        	    14: ;
+                        	    15: ; Zero page locations.
+                        	    16: ;
+                        	    17: PTR     .equ    $26         ; General-purpose pointer.
+                        	    18: SLOT    .equ    $2B         ; Slot number: $60 = slot 6, $50 = slot 5.
+                        	    19: TEMP    .equ    $3C         ; Temporary variable.
+                        	    20: SECTOR  .equ    $3D         ; Sector number.
+                        	    21: FOUND   .equ    $40         ; Found the track.
+                        	    22: TRACK   .equ    $41         ; Track number.
+                        	    23: ;
+                        	    24: ; Main memory locations.
+                        	    25: ;
+                        	    26: STACK   .equ    $0100       ; System stack.
+                        	    27: BUFFER  .equ    $0300       ; Buffer to help decode sector data.
+                        	    28: DECODER .equ    $0356       ; Address of the 6+2 decoder table.
+                        	    29: BOOT1   .equ    $0800       ; Location for the loaded boot sector.
+                        	    30: ;
+                        	    31: ; I/O ports for the disk controller.  Add $60 or $50 for the slot number.
+                        	    32: ;
+                        	    33: STEPOFF .equ    $C080       ; Stepper motor off.
+                        	    34: STEPON  .equ    $C081       ; Stepper motor on.
+                        	    35: MOTOR   .equ    $C089       ; Turn the main motor on.
+                        	    36: DRIVE1  .equ    $C08A       ; Select drive 1.
+                        	    37: READ1   .equ    $C08C       ; Read from the drive, control port 1.
+                        	    38: READ2   .equ    $C08E       ; Read from the drive, control port 2.
+                        	    39: ;
+                        	    40: ; The Cat's monitor supports disk controller ROM's at both $C600 and $C500.
+                        	    41: ; The code is identical.  Later we figure out which slot we are running in.
+                        	    42: ;
+                        	    43: ; However, the Cat doesn't really have slots in the same way as the Apple ][.
+                        	    44: ; Slot address decoding is done on the disk controller cartridge, not on the
+                        	    45: ; motherboard.  So you would need a completely different cartridge to
+                        	    46: ; move the disk controller from slot 6 to slot 5.
+                        	    47: ;
+                        	    48:         .org    $C600
+                        	    49: ;
+                        	    50: ; The ROM image starts with some signature bytes which are also code.
+                        	    51: ; Apple ]['s monitor requires that $20, $00, $03 appear at address $C601.
+                        	    52: ; The Cat's monitor requires that $00 appear at address $C603 and $3C
+                        	    53: ; appear at address $C607.  Both of these signatures are supported.
+                        	    54: ;
+                        	    55: START:
+00:C600 A220            	    56:         ldx     #$20
+00:C602 A000            	    57:         ldy     #$00
+00:C604 A203            	    58:         ldx     #$03
+00:C606 863C            	    59:         stx     TEMP
+                        	    60: ;
+                        	    61: ; Initialize the variables we need.
+                        	    62: ;
+00:C608 8441            	    63:         sty     TRACK       ; Set the track number to 0.
+00:C60A 8426            	    64:         sty     PTR         ; Set PTR to BOOT1 / $0800
+00:C60C A908            	    65:         lda     #>BOOT1
+00:C60E 8527            	    66:         sta     PTR+1
+                        	    67: ;
+                        	    68: ; According to https://6502disassembly.com/a2-rom/C600ROM.html, the
+                        	    69: ; following code generates a decoder table for 6+2 encoded data.
+                        	    70: ; See that link for a description of what is happening here.
+                        	    71: ;
+                        	    72: MKDEC:
+00:C610 863C            	    73:         stx     TEMP
+00:C612 8A              	    74:         txa
+00:C613 0A              	    75:         asl     a
+00:C614 243C            	    76:         bit     TEMP
+00:C616 F010            	    77:         beq     MKDEC3
+00:C618 053C            	    78:         ora     TEMP
+00:C61A 49FF            	    79:         eor     #$FF
+00:C61C 297E            	    80:         and     #$7E
+                        	    81: MKDEC2:
+00:C61E B008            	    82:         bcs     MKDEC3
+00:C620 4A              	    83:         lsr     a
+00:C621 D0FB            	    84:         bne     MKDEC2
+00:C623 98              	    85:         tya
+00:C624 9D5603          	    86:         sta     DECODER,x
+00:C627 C8              	    87:         iny
+                        	    88: MKDEC3:
+00:C628 E8              	    89:         inx
+00:C629 10E5            	    90:         bpl     MKDEC
+                        	    91: ;
+                        	    92: ; Call into the monitor ROM at an address that is known to contain an
+                        	    93: ; "RTS" instruction.  This puts the address of the caller on the stack.
+                        	    94: ; The address is recovered to determine if we are running from slot 5 or 6.
+                        	    95: ;
+00:C62B 2058FF          	    96:         jsr     $FF58
+00:C62E EA              	    97:         nop
+00:C62F BA              	    98:         tsx
+00:C630 BD0001          	    99:         lda     STACK,x
+00:C633 0A              	   100:         asl     a
+00:C634 0A              	   101:         asl     a
+00:C635 0A              	   102:         asl     a
+00:C636 0A              	   103:         asl     a
+00:C637 AA              	   104:         tax
+00:C638 852B            	   105:         sta     SLOT        ; X and SLOT is $60 for slot 6 and $50 for slot 5.
+                        	   106: ;
+                        	   107: ; Turn on drive 1 in read mode.  X is the slot offset - $60 or $50.
+                        	   108: ;
+00:C63A BD8AC0          	   109:         lda     DRIVE1,x
+00:C63D BD8CC0          	   110:         lda     READ1,x
+00:C640 BD8EC0          	   111:         lda     READ2,x
+00:C643 BD89C0          	   112:         lda     MOTOR,x
+                        	   113: ;
+                        	   114: ; Seek to track 0.  Do this by moving the head back track by track for
+                        	   115: ; 40 tracks (or 80 "phases").  Since we don't know where the head starts
+                        	   116: ; off, the head will eventually hit the end and bounce off a few times.
+                        	   117: ;
+00:C646 A050            	   118:         ldy     #80         ; 40 tracks = 80 phases
+                        	   119: SEEK:
+00:C648 BD80C0          	   120:         lda     STEPOFF,x   ; Turn off the previous phases on the stepper motor.
+00:C64B 98              	   121:         tya
+00:C64C 2903            	   122:         and     #$03        ; Get the stepper motor phase to set next.
+00:C64E 0A              	   123:         asl     a
+00:C64F 052B            	   124:         ora     SLOT
+00:C651 AA              	   125:         tax                 ; Adjust X with the offset to the phase.
+00:C652 BD81C0          	   126:         lda     STEPON,x    ; Turn on the new phases on the stepper motor.
+00:C655 A956            	   127:         lda     #$56
+00:C657 20A8FC          	   128:         jsr     $FCA8       ; Call a delay routine in the monitor ROM.
+00:C65A F003            	   129:         beq     SEEK2       ; Z is always set on exit from $FCA8.
+                        	   130: ;
+                        	   131: ; Apple ][ DOS assumes that the read sector routine is placed at $C65C
+                        	   132: ; but the Disk Smith Cat's boot ROM has a different code arrangement.
+                        	   133: ; Place a jump instruction at $C65C to the real read sector routine.
+                        	   134: ;
+                        	   135: ; When this routine is called from DOS, the following is assumed on entry:
+                        	   136: ;
+                        	   137: ;   X           $60 or $50 for the slot.
+                        	   138: ;   PTR         Points to the buffer to read the sector data into.
+                        	   139: ;   SECTOR      Sector number to start reading at.
+                        	   140: ;   TRACK       Track number to read from.
+                        	   141: ;   (BOOT1)     Sector number to stop reading at.
+                        	   142: ;   BOOT1+1     Address to jump to once the sectors have been read.
+                        	   143: ;
+                        	   144: ; Multiple sectors from the same track can be read using this routine.
+                        	   145: ;
+                        	   146: READSECT_ENTRY:
+00:C65C 18              	   147:         clc
+00:C65D 9028            	   148:         bcc     READSECT
+                        	   149: ;
+                        	   150: SEEK2:
+00:C65F 88              	   151:         dey                 ; Move to the next phase.
+00:C660 C0E6            	   152:         cpy     #$E6        ; Stop at phase -26.  A few more than 80.
+00:C662 853D            	   153:         sta     SECTOR      ; A will be zero upon return from $FCA8.
+00:C664 3021            	   154:         bmi     READSECT
+                        	   155: ;
+                        	   156: ; Read the sector address data to see if we have found the sector we wanted.
+                        	   157: ;
+                        	   158: READADDR:
+00:C666 A003            	   159:         ldy     #3
+                        	   160: READADDR2:
+00:C668 8540            	   161:         sta     FOUND
+                        	   162: READA1:
+00:C66A BD8CC0          	   163:         lda     READ1,x     ; Wait for a byte from the disk.
+00:C66D 10FB            	   164:         bpl     READA1
+00:C66F 2A              	   165:         rol     a           ; Rotate the byte left by 1 and save it.
+00:C670 853C            	   166:         sta     TEMP
+                        	   167: READA2:
+00:C672 BD8CC0          	   168:         lda     READ1,x     ; Wait for the next byte.
+00:C675 10FB            	   169:         bpl     READA2
+00:C677 253C            	   170:         and     TEMP        ; AND this byte with the previious one.
+00:C679 88              	   171:         dey
+00:C67A D0EC            	   172:         bne     READADDR2   ; Go back if more bytes needed.
+00:C67C 28              	   173:         plp                 ; Balance out the "php" below.
+00:C67D C53D            	   174:         cmp     SECTOR
+00:C67F D006            	   175:         bne     READSECT
+00:C681 A540            	   176:         lda     FOUND
+00:C683 C541            	   177:         cmp     TRACK
+00:C685 F001            	   178:         beq     READSECT2
+                        	   179: ;
+                        	   180: ; Read a sector.  Read bytes until we find an address header (D5 AA 96)
+                        	   181: ; or a data header (D5 AA AD) depending upon the carry bit.  Carry clear
+                        	   182: ; to look for an address header, or carry set to look for a data header.
+                        	   183: ;
+                        	   184: READSECT:
+00:C687 18              	   185:         clc
+                        	   186: READSECT2:
+00:C688 08              	   187:         php                 ; Save the carry flag for later.
+                        	   188: READB1:
+00:C689 BD8CC0          	   189:         lda     READ1,x     ; Wait for the next byte.
+00:C68C 10FB            	   190:         bpl     READB1
+                        	   191: MATCHD5:
+00:C68E C9D5            	   192:         cmp     #$D5        ; Is it $D5?
+00:C690 D0F7            	   193:         bne     READB1      ; Keep looking if it isn't.
+                        	   194: READB2:
+00:C692 BD8CC0          	   195:         lda     READ1,x     ; Wait for the second byte.
+00:C695 10FB            	   196:         bpl     READB2
+00:C697 C9AA            	   197:         cmp     #$AA        ; Is it $AA?
+00:C699 D0F3            	   198:         bne     MATCHD5     ; If not, check for $D5 instead.
+                        	   199: READB3:
+00:C69B BD8CC0          	   200:         lda     READ1,x     ; Wait for the third byte.
+00:C69E 10FB            	   201:         bpl     READB3
+00:C6A0 C996            	   202:         cmp     #$96        ; Address header?
+00:C6A2 F0C2            	   203:         beq     READADDR
+00:C6A4 28              	   204:         plp                 ; Recover the carry bit from the stack.
+00:C6A5 90E0            	   205:         bcc     READSECT    ; If we wanted an address, we shouldn't be here.
+00:C6A7 49AD            	   206:         eor     #$AD        ; Is the final byte $AD?
+00:C6A9 D0DC            	   207:         bne     READSECT    ; If not, try looking for a data header again.
+                        	   208: ;
+                        	   209: ; Read the data from the sector into memory at BOOT1.
+                        	   210: ;
+                        	   211: ; A is assumed to be zero on entry to this code.
+                        	   212: ;
+                        	   213: ; Start by reading the 2 low bits of each byte into BUFFER.
+                        	   214: ;
+                        	   215: READDATA:
+00:C6AB A056            	   216:         ldy     #86         ; Read 86 bytes of data.
+                        	   217: READDATA2:
+00:C6AD 843C            	   218:         sty     TEMP
+                        	   219: READC1:
+00:C6AF BC8CC0          	   220:         ldy     READ1,x     ; Wait for a byte.
+00:C6B2 10FB            	   221:         bpl     READC1
+00:C6B4 59D602          	   222:         eor     DECODER-128,y ; Decode the byte and add its value to A.
+00:C6B7 A43C            	   223:         ldy     TEMP        ; Still more bytes to go?
+00:C6B9 88              	   224:         dey
+00:C6BA 990003          	   225:         sta     BUFFER,y    ; Save the byte for later.
+00:C6BD D0EE            	   226:         bne     READDATA2
+                        	   227: ;
+                        	   228: ; Reads the 6 high bits of each byte from the sector into the buffer
+                        	   229: ; pointed to by (PTR).
+                        	   230: ;
+                        	   231: READDATA3:
+00:C6BF 843C            	   232:         sty     TEMP
+                        	   233: READC2:
+00:C6C1 BC8CC0          	   234:         ldy     READ1,x     ; Wait for a byte.
+00:C6C4 10FB            	   235:         bpl     READC2
+00:C6C6 59D602          	   236:         eor     DECODER-128,y ; Decode the byte and add its value to A.
+00:C6C9 A43C            	   237:         ldy     TEMP
+00:C6CB 9126            	   238:         sta     (PTR),y     ; Save the byte in the caller-supplied buffer.
+00:C6CD C8              	   239:         iny                 ; Still more bytes to go?
+00:C6CE D0EF            	   240:         bne     READDATA3
+                        	   241: ;
+                        	   242: READC3:
+00:C6D0 BC8CC0          	   243:         ldy     READ1,x     ; Wait for the checksum byte.
+00:C6D3 10FB            	   244:         bpl     READC3
+00:C6D5 59D602          	   245:         eor     DECODER-128,y ; Decode the byte and compare it with A.
+00:C6D8 D0AD            	   246:         bne     READSECT    ; If no match, try reading the sector again.
+                        	   247: ;
+                        	   248: ; The high 6 bits of each byte are now in the buffer pointed to by (PTR).
+                        	   249: ; The low 2 bits of each byte are in the buffer pointed to by BUFFER.
+                        	   250: ;
+00:C6DA A000            	   251:         ldy     #0
+                        	   252: COMBINE:
+00:C6DC A256            	   253:         ldx     #86         ; There are 86 bytes in BUFFER.
+                        	   254: COMBINE2:
+00:C6DE CA              	   255:         dex
+00:C6DF 30FB            	   256:         bmi     COMBINE     ; Wrap around if we go past the end of BUFFER.
+00:C6E1 B126            	   257:         lda     (PTR),y     ; Get the high 6 bits (currently in the low 6 bits).
+00:C6E3 5E0003          	   258:         lsr     BUFFER,x    ; Shift the low 2 bits into place.
+00:C6E6 2A              	   259:         rol     a
+00:C6E7 5E0003          	   260:         lsr     BUFFER,x
+00:C6EA 2A              	   261:         rol     a
+00:C6EB 9126            	   262:         sta     (PTR),y     ; We now have the full byte.
+00:C6ED C8              	   263:         iny                 ; More bytes left to go?
+00:C6EE D0EE            	   264:         bne     COMBINE2
+                        	   265: ;
+                        	   266: ; Are we done reading sectors?
+                        	   267: ;
+00:C6F0 E627            	   268:         inc     PTR+1       ; Advance the data pointer by 256 bytes.
+00:C6F2 E63D            	   269:         inc     SECTOR
+00:C6F4 A53D            	   270:         lda     SECTOR
+00:C6F6 CD0008          	   271:         cmp     BOOT1       ; Have we reached the sector number in (BOOT1)?
+00:C6F9 A62B            	   272:         ldx     SLOT
+00:C6FB 908A            	   273:         bcc     READSECT    ; If not, go and read another sector.
+                        	   274: ;
+                        	   275: ; Boot sector has now been loaded, so jump to it.
+                        	   276: ;
+                        	   277: ; If we were reading sectors other than the boot sector, then (BOOT1) is
+                        	   278: ; the sector to stop reading at, and BOOT1+1 is the address to return to
+                        	   279: ; at the end of the sector read routine.
+                        	   280: ;
+00:C6FD 4C0108          	   281:         jmp     BOOT1+1
+                        	   282: 
+
+
+Symbols by name:
+BOOT1                            E:0800
+BUFFER                           E:0300
+COMBINE                          A:C6DC
+COMBINE2                         A:C6DE
+DECODER                          E:0356
+DRIVE1                           E:C08A
+FOUND                            E:0040
+MATCHD5                          A:C68E
+MKDEC                            A:C610
+MKDEC2                           A:C61E
+MKDEC3                           A:C628
+MOTOR                            E:C089
+PTR                              E:0026
+READ1                            E:C08C
+READ2                            E:C08E
+READA1                           A:C66A
+READA2                           A:C672
+READADDR                         A:C666
+READADDR2                        A:C668
+READB1                           A:C689
+READB2                           A:C692
+READB3                           A:C69B
+READC1                           A:C6AF
+READC2                           A:C6C1
+READC3                           A:C6D0
+READDATA                         A:C6AB
+READDATA2                        A:C6AD
+READDATA3                        A:C6BF
+READSECT                         A:C687
+READSECT2                        A:C688
+READSECT_ENTRY                   A:C65C
+SECTOR                           E:003D
+SEEK                             A:C648
+SEEK2                            A:C65F
+SLOT                             E:002B
+STACK                            E:0100
+START                            A:C600
+STEPOFF                          E:C080
+STEPON                           E:C081
+TEMP                             E:003C
+TRACK                            E:0041
+
+Symbols by value:
+0026 PTR
+002B SLOT
+003C TEMP
+003D SECTOR
+0040 FOUND
+0041 TRACK
+0100 STACK
+0300 BUFFER
+0356 DECODER
+0800 BOOT1
+C080 STEPOFF
+C081 STEPON
+C089 MOTOR
+C08A DRIVE1
+C08C READ1
+C08E READ2
+C600 START
+C610 MKDEC
+C61E MKDEC2
+C628 MKDEC3
+C648 SEEK
+C65C READSECT_ENTRY
+C65F SEEK2
+C666 READADDR
+C668 READADDR2
+C66A READA1
+C672 READA2
+C687 READSECT
+C688 READSECT2
+C689 READB1
+C68E MATCHD5
+C692 READB2
+C69B READB3
+C6AB READDATA
+C6AD READDATA2
+C6AF READC1
+C6BF READDATA3
+C6C1 READC2
+C6D0 READC3
+C6DC COMBINE
+C6DE COMBINE2

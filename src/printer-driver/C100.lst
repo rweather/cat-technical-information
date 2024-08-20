@@ -1,0 +1,367 @@
+Sections:
+00: "segc100" (C100-C200)
+
+
+Source: "C100.s"
+                        	     1: 
+                        	     2: ;***********************************************************************
+                        	     3: ;
+                        	     4: ; This is the assembly code for the $C100 ROM - printer driver.
+                        	     5: ;
+                        	     6: ; This is just the entry point for the driver.  The real code is in the
+                        	     7: ; $C800 ROM for the printer driver.
+                        	     8: ;
+                        	     9: ;***********************************************************************
+                        	    10: 
+                        	    11:         .include "common.s"
+
+Source: "common.s"
+                        	     1: ;***********************************************************************
+                        	     2: ;
+                        	     3: ; Common definitions for the $C100 and $C800 printer driver ROM's.
+                        	     4: ;
+                        	     5: ;***********************************************************************
+                        	     6: ;
+                        	     7: ; Zero page locations.
+                        	     8: ;
+                        	     9: TEMP0   .equ    $00         ; Temporary variable.
+                        	    10: TEMP1   .equ    $01         ; Temporary variable.
+                        	    11: TEMP2   .equ    $02         ; Temporary variable.
+                        	    12: WNDLFT  .equ    $20         ; Left-most column of the text window (0-79).
+                        	    13: WNDWTH  .equ    $21         ; Width of the text window (1-80).
+                        	    14: WNDBTM  .equ    $22         ; Height of the text window (1-24).
+                        	    15: CHORZ   .equ    $24         ; Horizontal offset of the cursor (0-WNDWTH-1).
+                        	    16: CVERT   .equ    $25         ; Vertical offset of the cursor (0-WNDBTM-1).
+                        	    17: INVFLG  .equ    $32         ; Inverse flag: $FF = normal, $3F = inverse.
+                        	    18: OUTSW   .equ    $36         ; Address of the global character output routine.
+                        	    19: ;
+                        	    20: ; Main memory locations.
+                        	    21: ;
+                        	    22: STACK   .equ    $0100       ; System stack.
+                        	    23: GRMODE  .equ    $0479       ; Epson graphics bit image mode, default is "K".
+                        	    24: CHRINV  .equ    $04F9       ; Character to use to toggle inverse mode.
+                        	    25: CHRGR   .equ    $0579       ; Character to use to toggle graphics mode.
+                        	    26: CVTCRLF .equ    $05F9       ; 0 to convert CR into CRLF, 1 to not do that.
+                        	    27: PRWID   .equ    $0679       ; Width of the page for printing.
+                        	    28: PRHGR   .equ    $06F9       ; Graphics mode: 0=HGR1,2 1=HGR5,6 2=HGR3,4
+                        	    29: PRMOD   .equ    $0779       ; Graphics printing mode bits.
+                        	    30: PRCOL   .equ    $07F9       ; Current column for printing.
+                        	    31: ;
+                        	    32: ; I/O ports for the printer.
+                        	    33: ;
+                        	    34: PRWRITE .equ    $C090       ; Write data to printer.
+                        	    35: PRACK   .equ    $C1C0       ; Read printer acknowledge.
+                        	    36: PRBUSY  .equ    $C1C1       ; Read printer busy.
+                        	    37: ;
+                        	    38: ; ASCII characters.
+                        	    39: ;
+                        	    40: CH_LF   .equ    $0A
+                        	    41: CH_CR   .equ    $0D
+                        	    42: CH_ESC  .equ    $1B
+                        	    43: ;
+                        	    44: ; Bits in "PRMOD" that control graphics print options.
+                        	    45: ;
+                        	    46: MPAGE1  .equ    $01         ; Print graphics page 1.
+                        	    47: MPAGE2  .equ    $02         ; Print graphics page 2.
+                        	    48: MAND    .equ    $04         ; AND the two pages together to get the result.
+                        	    49: MOR     .equ    $08         ; OR  the two pages together to get the result.
+                        	    50: MEOF    .equ    $10         ; EOR the two pages together to get the result.
+                        	    51: MINV    .equ    $20         ; Inverse printing.
+                        	    52: MLARGE  .equ    $40         ; Enlarged printing.
+                        	    53: MOPTION .equ    $80         ; Select option (used by text printing mode).
+                        	    54: 
+
+Source: "C100.s"
+                        	    12: ;
+                        	    13: ; Entry points to the $C800 bank-switched ROM where the actual driver resides.
+                        	    14: ;
+                        	    15: PRCHAR  .equ    $C800       ; Print a character.
+                        	    16: PRGRAPH .equ    $C803       ; Print the graphics screen to the printer.
+                        	    17: PREXIT  .equ    $C806       ; Restore registers and exit from the driver.
+                        	    18: ;
+                        	    19: ; $C100 is called when "PR#1" is executed to initialise the printer and to
+                        	    20: ; switch the global character output routine to the printer.
+                        	    21: ;
+                        	    22: ; $C102 is called for normal character printing.
+                        	    23: ;
+                        	    24: ; Special characters:
+                        	    25: ;
+                        	    26: ;       $91     Print the graphics screen to the (Epson) printer.
+                        	    27: ;       $94     Toggle inverse printing mode.
+                        	    28: ;       $97     Toggle graphics printing mode.
+                        	    29: ;
+                        	    30:         .org    $C100
+                        	    31: ENTRY0:
+00:C100 18              	    32:         clc
+00:C101 B0              	    33:         .db     $B0         ; This causes the next instruction to be skipped.
+                        	    34: ENTRY1:
+00:C102 38              	    35:         sec
+00:C103 48              	    36:         pha                 ; Save the registers on the stack.
+00:C104 8A              	    37:         txa
+00:C105 48              	    38:         pha
+00:C106 98              	    39:         tya
+00:C107 48              	    40:         pha
+00:C108 A500            	    41:         lda     TEMP0       ; Save some zero page locations on the stack
+00:C10A 48              	    42:         pha                 ; as we will be using them as working variables.
+00:C10B A501            	    43:         lda     TEMP1
+00:C10D 48              	    44:         pha
+00:C10E A502            	    45:         lda     TEMP2
+00:C110 48              	    46:         pha
+00:C111 BA              	    47:         tsx
+00:C112 BD0601          	    48:         lda     STACK+6,X   ; Move the original A to the top of the stack.
+00:C115 48              	    49:         pha
+00:C116 B032            	    50:         bcs     PRINT
+                        	    51: ;
+                        	    52: ; Initialise variables for the printer driver.
+                        	    53: ;
+00:C118 A994            	    54:         lda     #$94        ; DC4 character to toggle inverse mode.
+00:C11A 8DF904          	    55:         sta     CHRINV
+00:C11D A997            	    56:         lda     #$97        ; ETB character to toggle graphics mode.
+00:C11F 8D7905          	    57:         sta     CHRGR
+00:C122 A900            	    58:         lda     #0          ; Convert CR into CRLF by default.
+00:C124 8DF905          	    59:         sta     CVTCRLF
+00:C127 8DF906          	    60:         sta     PRHGR       ; Select graphics modes HGR1,2 by default.
+00:C12A A524            	    61:         lda     CHORZ       ; Set the initial column number.
+00:C12C 2080C1          	    62:         jsr     SETCOL
+00:C12F A521            	    63:         lda     WNDWTH      ; Set the paper width from the screen width.
+00:C131 8D7906          	    64:         sta     PRWID
+00:C134 A901            	    65:         lda     #1          ; Print graphics page 1 by default.
+00:C136 8D7907          	    66:         sta     PRMOD
+00:C139 A94B            	    67:         lda     #$4B        ; "K" to select single-density bit image mode.
+00:C13B 8D7904          	    68:         sta     GRMODE
+                        	    69: ;
+                        	    70: ; Set the global character output routine to $C102 for printing characters.
+                        	    71: ;
+00:C13E A902            	    72:         lda     #<ENTRY1
+00:C140 8536            	    73:         sta     OUTSW
+00:C142 A9C1            	    74:         lda     #>ENTRY1
+00:C144 8537            	    75:         sta     OUTSW+1
+00:C146 68              	    76:         pla
+00:C147 EA              	    77:         nop
+00:C148 EA              	    78:         nop
+00:C149 F0              	    79:         .db     $F0         ; This causes the next instruction to be skipped.
+                        	    80: ;
+                        	    81: ; Print a character.
+                        	    82: ;
+                        	    83: PRINT:
+00:C14A 68              	    84:         pla
+00:C14B 8DFFCF          	    85:         sta     $CFFF       ; Activate that $C800 ROM for the printer driver.
+00:C14E 8D00C1          	    86:         sta     $C100
+00:C151 C991            	    87:         cmp     #$91        ; DC1 character?
+00:C153 D003            	    88:         bne     PRINT2
+00:C155 4C03C8          	    89:         jmp     PRGRAPH     ; Yes, print the graphics screen.
+                        	    90: PRINT2:
+00:C158 48              	    91:         pha
+00:C159 CDF904          	    92:         cmp     CHRINV      ; Check for the inverse control character.
+00:C15C D00A            	    93:         bne     PRINT3
+00:C15E A532            	    94:         lda     INVFLG      ; Toggle inverse mode.
+00:C160 49C0            	    95:         eor     #$C0
+00:C162 8532            	    96:         sta     INVFLG
+00:C164 68              	    97:         pla
+00:C165 4C06C8          	    98:         jmp     PREXIT
+                        	    99: PRINT3:
+00:C168 68              	   100:         pla
+00:C169 48              	   101:         pha
+00:C16A CD7905          	   102:         cmp     CHRGR
+00:C16D D00C            	   103:         bne     PRINT4
+00:C16F ADF906          	   104:         lda     PRHGR       ; Toggle graphics printing modes.
+00:C172 49FF            	   105:         eor     #$FF
+00:C174 8DF906          	   106:         sta     PRHGR 
+00:C177 68              	   107:         pla
+00:C178 4C06C8          	   108:         jmp     PREXIT
+                        	   109: PRINT4:
+00:C17B 68              	   110:         pla
+00:C17C 4C00C8          	   111:         jmp     PRCHAR      ; Print a regular character.
+                        	   112: ;
+00:C17F 2F              	   113:         .db     $2F         ; Padding
+                        	   114: ;
+                        	   115: ; Set the current column for printing to A+1.
+                        	   116: ;
+                        	   117: SETCOL:
+00:C180 6901            	   118:         adc     #1
+00:C182 8DF907          	   119:         sta     PRCOL
+00:C185 60              	   120:         rts
+                        	   121: ;
+                        	   122: ; Random garbage to pad the $C100 ROM to 256 bytes.  The real printer
+                        	   123: ; driver code is in the $C800 ROM.
+                        	   124: ;
+00:C186 00              	   125:         .db $00, $30
+00:C187 30
+00:C188 5A              	   126:         .db $5A, $50, $33, $31, $20, $20, $00, $31
+00:C189 50
+00:C18A 33
+00:C18B 31
+00:C18C 20
+00:C18D 20
+00:C18E 00
+00:C18F 31
+00:C190 5A              	   127:         .db $5A, $50, $33, $32, $20, $20, $00, $32
+00:C191 50
+00:C192 33
+00:C193 32
+00:C194 20
+00:C195 20
+00:C196 00
+00:C197 32
+00:C198 5A              	   128:         .db $5A, $50, $33, $33, $20, $20, $00, $33
+00:C199 50
+00:C19A 33
+00:C19B 33
+00:C19C 20
+00:C19D 20
+00:C19E 00
+00:C19F 33
+00:C1A0 5A              	   129:         .db $5A, $50, $33, $34, $20, $20, $00, $34
+00:C1A1 50
+00:C1A2 33
+00:C1A3 34
+00:C1A4 20
+00:C1A5 20
+00:C1A6 00
+00:C1A7 34
+00:C1A8 5A              	   130:         .db $5A, $50, $33, $35, $20, $20, $00, $35
+00:C1A9 50
+00:C1AA 33
+00:C1AB 35
+00:C1AC 20
+00:C1AD 20
+00:C1AE 00
+00:C1AF 35
+00:C1B0 5A              	   131:         .db $5A, $50, $33, $36, $20, $20, $00, $36
+00:C1B1 50
+00:C1B2 33
+00:C1B3 36
+00:C1B4 20
+00:C1B5 20
+00:C1B6 00
+00:C1B7 36
+00:C1B8 5A              	   132:         .db $5A, $50, $33, $37, $20, $20, $00, $37
+00:C1B9 50
+00:C1BA 33
+00:C1BB 37
+00:C1BC 20
+00:C1BD 20
+00:C1BE 00
+00:C1BF 37
+00:C1C0 DA              	   133:         .db $DA, $D0, $33, $B8, $A0, $20, $00, $38
+00:C1C1 D0
+00:C1C2 33
+00:C1C3 B8
+00:C1C4 A0
+00:C1C5 20
+00:C1C6 00
+00:C1C7 38
+00:C1C8 DA              	   134:         .db $DA, $D0, $B3, $B9, $A0, $20, $00, $39
+00:C1C9 D0
+00:C1CA B3
+00:C1CB B9
+00:C1CC A0
+00:C1CD 20
+00:C1CE 00
+00:C1CF 39
+00:C1D0 5A              	   135:         .db $5A, $50, $33, $41, $20, $20, $00, $3A
+00:C1D1 50
+00:C1D2 33
+00:C1D3 41
+00:C1D4 20
+00:C1D5 20
+00:C1D6 00
+00:C1D7 3A
+00:C1D8 5A              	   136:         .db $5A, $50, $33, $42, $20, $20, $00, $3B
+00:C1D9 50
+00:C1DA 33
+00:C1DB 42
+00:C1DC 20
+00:C1DD 20
+00:C1DE 00
+00:C1DF 3B
+00:C1E0 5A              	   137:         .db $5A, $50, $33, $43, $20, $20, $00, $3C
+00:C1E1 50
+00:C1E2 33
+00:C1E3 43
+00:C1E4 20
+00:C1E5 20
+00:C1E6 00
+00:C1E7 3C
+00:C1E8 5A              	   138:         .db $5A, $50, $33, $44, $20, $20, $00, $3D
+00:C1E9 50
+00:C1EA 33
+00:C1EB 44
+00:C1EC 20
+00:C1ED 20
+00:C1EE 00
+00:C1EF 3D
+00:C1F0 5A              	   139:         .db $5A, $50, $33, $45, $20, $20, $00, $00
+00:C1F1 50
+00:C1F2 33
+00:C1F3 45
+00:C1F4 20
+00:C1F5 20
+00:C1F6 00
+00:C1F7 00
+00:C1F8 0A              	   140:         .db $0A, $00, $33, $46, $20, $20, $00, $3F
+00:C1F9 00
+00:C1FA 33
+00:C1FB 46
+00:C1FC 20
+00:C1FD 20
+00:C1FE 00
+00:C1FF 3F
+                        	   141: 
+
+
+Symbols by name:
+CHORZ                            E:0024
+CHRGR                            E:0579
+CHRINV                           E:04F9
+CVTCRLF                          E:05F9
+ENTRY0                           A:C100
+ENTRY1                           A:C102
+GRMODE                           E:0479
+INVFLG                           E:0032
+OUTSW                            E:0036
+PRCHAR                           E:C800
+PRCOL                            E:07F9
+PREXIT                           E:C806
+PRGRAPH                          E:C803
+PRHGR                            E:06F9
+PRINT                            A:C14A
+PRINT2                           A:C158
+PRINT3                           A:C168
+PRINT4                           A:C17B
+PRMOD                            E:0779
+PRWID                            E:0679
+SETCOL                           A:C180
+STACK                            E:0100
+TEMP0                            E:0000
+TEMP1                            E:0001
+TEMP2                            E:0002
+WNDWTH                           E:0021
+
+Symbols by value:
+0000 TEMP0
+0001 TEMP1
+0002 TEMP2
+0021 WNDWTH
+0024 CHORZ
+0032 INVFLG
+0036 OUTSW
+0100 STACK
+0479 GRMODE
+04F9 CHRINV
+0579 CHRGR
+05F9 CVTCRLF
+0679 PRWID
+06F9 PRHGR
+0779 PRMOD
+07F9 PRCOL
+C100 ENTRY0
+C102 ENTRY1
+C14A PRINT
+C158 PRINT2
+C168 PRINT3
+C17B PRINT4
+C180 SETCOL
+C800 PRCHAR
+C803 PRGRAPH
+C806 PREXIT

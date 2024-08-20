@@ -6,6 +6,7 @@ is plugged into the Cat.
 * `C600.hex` - Hexadecimal dump of the ROM contents.
 * `C600.bin` - Binary dump of the ROM contents.
 * `C600.s` - Annotated assembly code for the ROM.
+* `C600.lst` - Assembly listing for the ROM, generated from `C600.s`.
 
 The `C600.s` file is designed to be assembled using
 [vasm](http://sun.hasenbraten.de/vasm/).
