@@ -102,6 +102,10 @@ If a disk controller cartridge is present in slot 6, then slot 5 will not
 boot automatically.  Use <tt>PR#5</tt> at the BASIC prompt to activate the
 code in the slot 5 cartridge.
 
+## New Projects
+
+* [ROM cartridge for the RS-232 interface](ROMCart.md)
+
 ## Can We Rebuild It?
 
 Since Cats (and Laser 3000's) are so rare these days, there is a question as

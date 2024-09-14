@@ -1,0 +1,184 @@
+Sections:
+00: "segc500" (C500-C578)
+01: "segc57c" (C57C-C57C)
+
+
+Source: "loader.s"
+                        	     1: ;
+                        	     2: ; Copyright (C) 2024 Rhys Weatherley
+                        	     3: ;
+                        	     4: ; Permission is hereby granted, free of charge, to any person obtaining a
+                        	     5: ; copy of this software and associated documentation files (the "Software"),
+                        	     6: ; to deal in the Software without restriction, including without limitation
+                        	     7: ; the rights to use, copy, modify, merge, publish, distribute, sublicense,
+                        	     8: ; and/or sell copies of the Software, and to permit persons to whom the
+                        	     9: ; Software is furnished to do so, subject to the following conditions:
+                        	    10: ;
+                        	    11: ; The above copyright notice and this permission notice shall be included
+                        	    12: ; in all copies or substantial portions of the Software.
+                        	    13: ;
+                        	    14: ; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+                        	    15: ; OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+                        	    16: ; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+                        	    17: ; AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+                        	    18: ; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+                        	    19: ; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+                        	    20: ; DEALINGS IN THE SOFTWARE.
+                        	    21: ;
+                        	    22: 
+                        	    23: ;
+                        	    24: ; Zero page variables.
+                        	    25: ;
+                        	    26: SLOT    .equ    $42         ; Points to the start of the slot ROM.
+                        	    27: LOAD    .equ    $34         ; Saved load address.
+                        	    28: PTR     .equ    $3C         ; Temporary pointer variable.
+                        	    29: SIZE    .equ    $3E         ; Size of the program to load.
+                        	    30: BANK    .equ    $2F         ; Number of the next bank to load from.
+                        	    31: ;
+                        	    32: ; Other memory locations.
+                        	    33: ;
+                        	    34: STACK   .equ    $0100       ; Location of the stack.
+                        	    35: SLOTSV  .equ    $047A       ; Saved slot number for use by other programs.
+                        	    36: ;
+                        	    37: ; The origin is specified as $C500, but it can also be run from $C200.
+                        	    38: ;
+                        	    39:         .org    $C500
+                        	    40: ;
+                        	    41: ; Signature bytes to make this an autoboot ROM for slot 5.  The kernel
+                        	    42: ; ROM will think that this is a secondary disk controller.
+                        	    43: ;
+                        	    44: ; Equivalent instructions:
+                        	    45: ;
+                        	    46: ;       ldx     #$20
+                        	    47: ;       ldy     #$00
+                        	    48: ;       ldx     #$03
+                        	    49: ;       stx     $3C
+                        	    50: ;
+                        	    51:     .ifdef AUTOBOOT
+00:C500 A2              	    52:         .db     $A2, $20, $A0, $00, $A2, $03, $86, $3C
+00:C501 20
+00:C502 A0
+00:C503 00
+00:C504 A2
+00:C505 03
+00:C506 86
+00:C507 3C
+                        	    53:     .endif
+                        	    54: ;
+                        	    55: ; Make it so that "PR#N" will activate the ROM, but leave the input
+                        	    56: ; and output devices alone.
+                        	    57: ;
+00:C508 2093FE          	    58:         jsr     $FE93       ; Reset the output device with "PR#0".
+00:C50B 2089FE          	    59:         jsr     $FE89       ; Reset the input device with "IN#0".
+                        	    60: ;
+                        	    61: ; Figure out which slot we are located in.
+                        	    62: ;
+00:C50E 2058FF          	    63:         jsr     $FF58       ; Location of a "RTS" instruction in the kernel ROM.
+00:C511 BA              	    64:         tsx
+00:C512 BD0001          	    65:         lda     STACK,x     ; Should be $C2 or $C5 for the return address.
+00:C515 8543            	    66:         sta     SLOT+1
+00:C517 8D7A04          	    67:         sta     SLOTSV
+00:C51A A900            	    68:         lda     #0
+00:C51C 8542            	    69:         sta     SLOT        ; SLOT is now $C200 or $C500.
+                        	    70: ;
+                        	    71: ; Get the load address and size of the primary boot program in the ROM.
+                        	    72: ; These are stored in the last 4 bytes of the 128-byte loader program.
+                        	    73: ;
+00:C51E A07C            	    74:         ldy     #$7C
+00:C520 B142            	    75:         lda     (SLOT),y
+00:C522 853C            	    76:         sta     PTR
+00:C524 8534            	    77:         sta     LOAD
+00:C526 C8              	    78:         iny
+00:C527 B142            	    79:         lda     (SLOT),y
+00:C529 853D            	    80:         sta     PTR+1
+00:C52B 8535            	    81:         sta     LOAD+1
+00:C52D C8              	    82:         iny
+00:C52E B142            	    83:         lda     (SLOT),y
+00:C530 853E            	    84:         sta     SIZE
+00:C532 C8              	    85:         iny
+00:C533 B142            	    86:         lda     (SLOT),y
+00:C535 853F            	    87:         sta     SIZE+1
+                        	    88: ;
+                        	    89: ; Offset PTR by -128 to account for the offset in Y below.
+                        	    90: ;
+00:C537 A53C            	    91:         lda     PTR
+00:C539 38              	    92:         sec
+00:C53A E980            	    93:         sbc     #$80
+00:C53C 853C            	    94:         sta     PTR
+00:C53E A53D            	    95:         lda     PTR+1
+00:C540 E900            	    96:         sbc     #0
+00:C542 853D            	    97:         sta     PTR+1
+                        	    98: ;
+                        	    99: ; Copy the primary boot program from the start of the ROM to its load address.
+                        	   100: ;
+00:C544 A000            	   101:         ldy     #0
+00:C546 842F            	   102:         sty     BANK
+                        	   103: NEXTBANK:
+00:C548 A52F            	   104:         lda     BANK
+00:C54A 9142            	   105:         sta     (SLOT),y
+00:C54C A080            	   106:         ldy     #$80        ; Offset Y by 128.
+                        	   107: COPYBANK:
+00:C54E B142            	   108:         lda     (SLOT),y    ; Load from $CN80 - $CNFF.
+00:C550 913C            	   109:         sta     (PTR),y
+00:C552 C8              	   110:         iny
+00:C553 D0F9            	   111:         bne     COPYBANK
+                        	   112: ;
+                        	   113: ; Move onto the next bank.
+                        	   114: ;
+00:C555 E62F            	   115:         inc     BANK
+00:C557 A53C            	   116:         lda     PTR
+00:C559 18              	   117:         clc
+00:C55A 6980            	   118:         adc     #$80
+00:C55C 853C            	   119:         sta     PTR
+00:C55E A53D            	   120:         lda     PTR+1
+00:C560 6900            	   121:         adc     #0
+00:C562 853D            	   122:         sta     PTR+1
+                        	   123: ;
+                        	   124: ; Are we done yet?  Subtract 128 from SIZE and check for < 0.
+                        	   125: ;
+                        	   126: ; It is assumed that the actual size of the primary boot program is
+                        	   127: ; SIZE plus 1.  That is, SIZE is deliberately one byte short.
+                        	   128: ; We also copy entire 128 byte banks, so SIZE % 128 should be 127.
+                        	   129: ;
+00:C564 A53E            	   130:         lda     SIZE
+00:C566 38              	   131:         sec
+00:C567 E980            	   132:         sbc     #$80
+00:C569 853E            	   133:         sta     SIZE
+00:C56B B0DB            	   134:         bcs     NEXTBANK
+00:C56D A53F            	   135:         lda     SIZE+1
+00:C56F E900            	   136:         sbc     #0
+00:C571 853F            	   137:         sta     SIZE+1
+00:C573 B0D3            	   138:         bcs     NEXTBANK
+                        	   139: ;
+                        	   140: ; Jump to the primary boot program's load address.
+                        	   141: ;
+00:C575 6C3400          	   142:         jmp     (LOAD)
+                        	   143: ;
+                        	   144: ; End of the loader code.  This is followed by the load address and size
+                        	   145: ; of the primary boot program.
+                        	   146: ;
+                        	   147:         .org    $C57C
+                        	   148: 
+
+
+Symbols by name:
+BANK                             E:002F
+COPYBANK                         A:C54E
+LOAD                             E:0034
+NEXTBANK                         A:C548
+PTR                              E:003C
+SIZE                             E:003E
+SLOT                             E:0042
+SLOTSV                           E:047A
+STACK                            E:0100
+
+Symbols by value:
+002F BANK
+0034 LOAD
+003C PTR
+003E SIZE
+0042 SLOT
+0100 STACK
+047A SLOTSV
+C548 NEXTBANK
+C54E COPYBANK
