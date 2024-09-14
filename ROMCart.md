@@ -151,6 +151,24 @@ The binary image `src/rom-cartridge/hello2.bin` is similar to the first
 hello example.  It uses the loader to copy the example code to $0300
 in RAM and then runs the example from there.
 
+### Moire
+
+The binary image `src/rom-cartridge/moire.bin` contains a small BASIC
+program to draw Moire patterns on the screen.  Activate it with `PR#2`.
+
+The full plain text of the BASIC program is in the EEPROM.  The loader
+redirects keyboard input to the EEPROM, effectively typing the source code
+in manually!
+
+The `src/rom-cartridge/build-basic-rom.py` Python script packs a ROM
+image from the BASIC source code and the `basload.bin` loader binary.
+The image starts with `NEW` to clear the current BASIC program from
+memory and ends with `RUN` to run the completed program.
+
+Of course, it would be better to load a tokenised version of the BASIC
+code like from a floppy disk.  But it is really cool to see the loader
+type the program in for you!
+
 ## Expansion capabilities
 
 The address, data, control, and power lines are exposed on two

@@ -1,0 +1,158 @@
+Sections:
+00: "segc500" (C500-C55F)
+01: "segc580" (C580-C580)
+
+
+Source: "basload.s"
+                        	     1: ;
+                        	     2: ; Copyright (C) 2024 Rhys Weatherley
+                        	     3: ;
+                        	     4: ; Permission is hereby granted, free of charge, to any person obtaining a
+                        	     5: ; copy of this software and associated documentation files (the "Software"),
+                        	     6: ; to deal in the Software without restriction, including without limitation
+                        	     7: ; the rights to use, copy, modify, merge, publish, distribute, sublicense,
+                        	     8: ; and/or sell copies of the Software, and to permit persons to whom the
+                        	     9: ; Software is furnished to do so, subject to the following conditions:
+                        	    10: ;
+                        	    11: ; The above copyright notice and this permission notice shall be included
+                        	    12: ; in all copies or substantial portions of the Software.
+                        	    13: ;
+                        	    14: ; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+                        	    15: ; OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+                        	    16: ; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+                        	    17: ; AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+                        	    18: ; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+                        	    19: ; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+                        	    20: ; DEALINGS IN THE SOFTWARE.
+                        	    21: ;
+                        	    22: 
+                        	    23: ;
+                        	    24: ; Zero page variables.
+                        	    25: ;
+                        	    26: INSW    .equ    $38         ; Address of the keyboard input routine.
+                        	    27: PTR     .equ    $FE         ; Temporary 16-bit pointer variable.
+                        	    28: ;
+                        	    29: ; Other memory locations.
+                        	    30: ;
+                        	    31: STACK   .equ    $0100       ; Location of the stack.
+                        	    32: SLOT    .equ    $047A       ; Saved slot number: $C2 or $C5.
+                        	    33: BANK    .equ    $04FA       ; Number of the next bank to load from.
+                        	    34: OFFSET  .equ    $057A       ; Offset into the current bank.
+                        	    35: ;
+                        	    36: ; The origin is specified as $C500, but it can also be run from $C200.
+                        	    37: ;
+                        	    38:         .org    $C500
+                        	    39: ;
+                        	    40: ; Signature bytes to make this an autoboot ROM for slot 5.  The kernel
+                        	    41: ; ROM will think that this is a secondary disk controller.
+                        	    42: ;
+                        	    43: ; Equivalent instructions:
+                        	    44: ;
+                        	    45: ;       ldx     #$20
+                        	    46: ;       ldy     #$00
+                        	    47: ;       ldx     #$03
+                        	    48: ;       stx     $3C
+                        	    49: ;
+                        	    50:     .ifdef AUTOBOOT
+                        	    51:         .db     $A2, $20, $A0, $00, $A2, $03, $86, $3C
+                        	    52:     .endif
+                        	    53: ;
+                        	    54: ; Make it so that "PR#N" will activate the ROM, but leave the output
+                        	    55: ; device alone.
+                        	    56: ;
+00:C500 2093FE          	    57:         jsr     $FE93       ; Reset the output device with "PR#0".
+                        	    58: ;
+                        	    59: ; Figure out which slot we are located in.
+                        	    60: ;
+00:C503 2058FF          	    61:         jsr     $FF58       ; Location of a "RTS" instruction in the kernel ROM.
+00:C506 BA              	    62:         tsx
+00:C507 BD0001          	    63:         lda     STACK,x     ; Should be $C2 or $C5 for the return address.
+00:C50A 8D7A04          	    64:         sta     SLOT
+00:C50D A200            	    65:         ldx     #0          ; Start reading from bank 0.
+00:C50F 8EFA04          	    66:         stx     BANK
+00:C512 A280            	    67:         ldx     #$80        ; Offset into the bank plus 128.
+00:C514 8E7A05          	    68:         stx     OFFSET
+                        	    69: ;
+                        	    70: ; Redirect keyboard input to call us for characters.
+                        	    71: ;
+00:C517 8539            	    72:         sta     INSW+1
+00:C519 A920            	    73:         lda     #<KEYIN
+00:C51B 8538            	    74:         sta     INSW
+                        	    75: ;
+                        	    76: ; Jump into BASIC and start loading the program.
+                        	    77: ;
+00:C51D 4C03E0          	    78:         jmp     $E003
+                        	    79: ;
+                        	    80: ; Fake keyboard input routine to feed the contents of the BASIC program
+                        	    81: ; into the BASIC interpreter character by character.
+                        	    82: ;
+                        	    83: KEYIN:
+00:C520 98              	    84:         tya                 ; Save the Y register on the stack.
+00:C521 48              	    85:         pha
+00:C522 A900            	    86:         lda     #0          ; Get a pointer to the slot ROM.
+00:C524 85FE            	    87:         sta     PTR
+00:C526 AD7A04          	    88:         lda     SLOT
+00:C529 85FF            	    89:         sta     PTR+1
+00:C52B A000            	    90:         ldy     #0
+00:C52D ADFA04          	    91:         lda     BANK
+00:C530 91FE            	    92:         sta     (PTR),y     ; Set the bank to read from.
+00:C532 AC7A05          	    93:         ldy     OFFSET
+00:C535 B1FE            	    94:         lda     (PTR),y     ; Read from the current position in the bank.
+00:C537 F01E            	    95:         beq     FINISHED    ; We are finished when we see a NUL.
+00:C539 C8              	    96:         iny                 ; Advance to the next position in the ROM.
+00:C53A D005            	    97:         bne     KEYIN2
+00:C53C EEFA04          	    98:         inc     BANK
+00:C53F A080            	    99:         ldy     #$80
+                        	   100: KEYIN2:
+00:C541 8C7A05          	   101:         sty     OFFSET
+00:C544 85FE            	   102:         sta     PTR
+00:C546 AD00C0          	   103:         lda     $C000       ; Has BREAK been pressed on the keyboard?
+00:C549 C9FF            	   104:         cmp     #$FF
+00:C54B F007            	   105:         beq     BREAK
+00:C54D 68              	   106:         pla
+00:C54E A8              	   107:         tay
+00:C54F A5FE            	   108:         lda     PTR
+00:C551 0980            	   109:         ora     #$80        ; Convert into "High ASCII".
+00:C553 60              	   110:         rts
+                        	   111: BREAK:
+00:C554 2C10C0          	   112:         bit     $C010       ; Clear the BREAK from the keyboard buffer.
+                        	   113: ;
+                        	   114: ; When we get here, we have encountered a NUL byte or BREAK, so we are done.
+                        	   115: ; Restore the standard keyboard input routine and jump to it.
+                        	   116: ;
+                        	   117: FINISHED:
+00:C557 68              	   118:         pla                 ; Restore the value of Y.
+00:C558 A8              	   119:         tay
+00:C559 2089FE          	   120:         jsr     $FE89       ; Reset the input device with "IN#0".
+00:C55C 6C3800          	   121:         jmp     (INSW)
+                        	   122: 
+                        	   123: ;
+                        	   124: ; End of the loader code.  Pad to a full 128 bytes.
+                        	   125: ;
+                        	   126:         .org    $C580
+                        	   127: 
+
+
+Symbols by name:
+BANK                             E:04FA
+BREAK                            A:C554
+FINISHED                         A:C557
+INSW                             E:0038
+KEYIN                            A:C520
+KEYIN2                           A:C541
+OFFSET                           E:057A
+PTR                              E:00FE
+SLOT                             E:047A
+STACK                            E:0100
+
+Symbols by value:
+0038 INSW
+00FE PTR
+0100 STACK
+047A SLOT
+04FA BANK
+057A OFFSET
+C520 KEYIN
+C541 KEYIN2
+C554 BREAK
+C557 FINISHED
